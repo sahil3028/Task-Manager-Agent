@@ -10,23 +10,18 @@ def login_dialog():
 
     if st.button("Continue"):
         if username.strip():
-            username=username.strip()
-            st.session_state.user = username
+            st.session_state.user = username.strip()
             st.rerun()
         else:
             st.warning("Username cannot be empty")
 
 if st.session_state.user is None:
     login_dialog()
-else:
-    st.success(f"Welcome, {st.session_state.user} 👋")
-
+    st.stop()
 
 st.title("TO-DO Agent")
 st.subheader("manage your tasks with your ai friend")
 
-
-print("++++++++++++++++++++++++++++++++++++++++++++++\n\n\n"+st.session_state.user)
 user=st.session_state.user
 
 if "tasks" not in st.session_state:

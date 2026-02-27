@@ -1,76 +1,119 @@
-from dotenv import load_dotenv
-import os
+import file_handling as fh
+import streamlit as st
 
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from  langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic_core.core_schema import model_field
-from langchain.tools import tool
-from langchain.agents import create_openai_tools_agent,AgentExecutor
-from todoist_api_python.api import TodoistAPI
+if "user" not in st.session_state:
+    st.session_state.user = None
 
+@st.dialog("Login")
+def login_dialog():
+    username = st.text_input("Enter username")
 
+    if st.button("Continue"):
+        if username.strip():
+            username=username.strip()
+            st.session_state.user = username
+            st.rerun()
+        else:
+            st.warning("Username cannot be empty")
 
-load_dotenv()
-
-todo_api=os.getenv("TODOLIST_API_KEY")
-gemini_api=os.getenv("GEMINI_API_KEY")
-
-llm= ChatGoogleGenerativeAI(
-    model='gemini-2.5-flash',
-    google_api_key=gemini_api,
-    temperature=0.5
-)
+if st.session_state.user is None:
+    login_dialog()
+else:
+    st.success(f"Welcome, {st.session_state.user} 👋")
 
 
-todolist=TodoistAPI(todo_api)
+st.title("TO-DO Agent")
+st.subheader("manage your tasks with your ai friend")
 
 
-@tool
-def add_task(task,description=None):
-    """add a new task for the user, use this when the user asks to add a task or create a new task"""
-    todolist.add_task(content=task,
-                      description=description
-                      )
-@tool
-def show_task():
-    """show all the task from Todolist, use this when the user wants to see all of his task or user asks a questions about their previous task"""
-    results_paginator =todolist.get_tasks()
-    tasks=[]
-    for task_list in results_paginator:
-        for task in task_list:
-            print(task)
-            tasks.append(task.content)
-            print(task.content)
-    return tasks
-tools=[add_task,show_task]
+print("++++++++++++++++++++++++++++++++++++++++++++++\n\n\n"+st.session_state.user)
+user=st.session_state.user
+
+if "tasks" not in st.session_state:
+    st.session_state.tasks = fh.load_file(user)
+
+if "mode" not in st.session_state:
+    st.session_state.mode = False
+
+tasks = st.session_state.tasks
+
+ongoing,completed=st.columns(2)
+with ongoing:
+    st.subheader("CURRENT 🔥")
+    if tasks:
+        for index, todo in enumerate(tasks):
+            if not todo["status"]:
+                checked = st.checkbox(
+                    todo["task"],
+                    key=f"ongoing_{todo['id']}"
+                )
+
+                if checked:
+                    st.session_state.tasks[index]["status"] = True
+                    fh.complete_task(user,st.session_state.tasks)
+                    st.rerun()
+    else:
+        st.write("no tasks ")
 
 
-system_prompt="""youre a helpful assistant. who help people with their task and clear their doubts and help them in whatever they ask
-                you also show the user all the tasks if they ask you to show all the tasks , you show them directly in bullet points"""
+with completed:
+    if tasks:
+        st.subheader("FINISHED ✅")
+        for index, todo in enumerate(tasks):
+            if todo["status"]:
+                check,remove=st.columns([4,1])
+                with check:
+                    checked= st.checkbox(
+                        todo["task"],
+                        value=True,
+                        key=f"completed_{todo['id']}"
+                    )
+                    if not checked:
+                        st.session_state.tasks[index]["status"] = False
+                        fh.complete_task(user,st.session_state.tasks)
+                        st.rerun()
 
-#prompt has a list of 2 tuples
-prompt= ChatPromptTemplate([("system",system_prompt),
-                            MessagesPlaceholder("history"),
-                            ("user","{input}"),
-                            MessagesPlaceholder("agent_scratchpad")
-                            ])
+                with remove:
+                    delete = st.button(
+                        "🗑️",
+                        key=f"delete_{todo['id']}"
+                    )
+                    if delete:
+                        st.session_state.tasks.pop(index)
+                        fh.complete_task(user, tasks)
 
+def add_task():
+    text = st.session_state.new.strip()
+    if not text:
+        return
+    if tasks:
+        st.session_state.tasks.append({
+            "task": text,
+            "status": False,
+            "id": len(st.session_state.tasks)
+        })
+    else:
+        st.session_state.tasks.append({
+            "task": text,
+            "status": False,
+            "id": 0
+        })
+    fh.complete_task(user,st.session_state.tasks)
+    st.session_state.new=""
 
-#in langchain | doesnt mean "OR" it has special meaning
-#chain= prompt | llm | StrOutputParser()
+if not st.session_state.mode:
+    switch=st.button(label="BhOnDU BoT🤖",key="switch")
+    st.text_input(label=" ", placeholder="Enter Your Task",key="new",on_change=add_task)
 
-#this was used to take input if using chain
-#response= chain.invoke({"input":user_input})
+    if switch:
+        st.session_state.mode=True
+        st.rerun()
+else:
+    switch=st.button(label="To-dO📝",key="switch")
+    st.subheader("BhOnDU BoT🤖 is comming soon")
 
-agent= create_openai_tools_agent(llm,tools,prompt)
-agent_executor= AgentExecutor(agent=agent,tools=tools,verbose=True)
+    if switch:
+        st.session_state.mode= False
+        st.rerun()
 
-history=[]
-while True:
-    user_input = input("me: ")
-    response = agent_executor.invoke({"input": user_input,"history":history})
-    print(response["output"])
-    history.append(HumanMessage(content=user_input))
-    history.append(AIMessage(content=response["output"]))
+print(st.session_state["new"])

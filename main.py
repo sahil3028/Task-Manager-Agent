@@ -1,5 +1,6 @@
 import file_handling as fh
 import streamlit as st
+import random
 
 if "user" not in st.session_state:
     st.session_state.user = None
@@ -85,7 +86,7 @@ def add_task():
         st.session_state.tasks.append({
             "task": text,
             "status": False,
-            "id": len(st.session_state.tasks)
+            "id": f"{len(st.session_state.tasks)}{random.randint(1, 10)}"
         })
     else:
         st.session_state.tasks.append({

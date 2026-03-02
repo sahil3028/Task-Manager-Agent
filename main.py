@@ -6,39 +6,34 @@ from dotenv import load_dotenv
 import os
 
 from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from  langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic_core.core_schema import model_field
 from langchain.tools import tool
 from langchain.agents import create_openai_tools_agent,AgentExecutor
-from todoist_api_python.api import TodoistAPI
 
 
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-# if "user" not in st.session_state:
-#     st.session_state.user = None
-#
-# @st.dialog("Login")
-# def login_dialog():
-#     username = st.text_input("Enter username")
-#
-#     if st.button("Continue"):
-#         if username.strip():
-#             st.session_state.user = username.strip()
-#             st.rerun()
-#         else:
-#             st.warning("Username cannot be empty")
-#
-# if st.session_state.user is None:
-#     login_dialog()
-#     st.stop()
-#
-# st.title("TO-DO Agent")
-# st.subheader("manage your tasks with your Bhondu-Bot")
+@st.dialog("Login")
+def login_dialog():
+    username = st.text_input("Enter username")
 
-#user=st.session_state.user
-user = "sahil"
+    if st.button("Continue"):
+        if username.strip():
+            st.session_state.user = username.strip()
+            st.rerun()
+        else:
+            st.warning("Username cannot be empty")
+
+if st.session_state.user is None:
+    login_dialog()
+    st.stop()
+
+st.title("TO-DO Agent")
+st.subheader("manage your tasks with your Bhondu-Bot")
+
+user=st.session_state.user
 if "tasks" not in st.session_state:
     st.session_state.tasks = fh.load_file(user)
 

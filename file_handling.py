@@ -10,12 +10,11 @@ def load_file(user):
 
     return data.get(user,[])
 
-def complete_task(user,tasks):
+def save_file(user, tasks):
 
         data={}
         with open(FILE_PATH,'r') as file:
             data=json.load(file)
-
 
             data[user]=tasks
 

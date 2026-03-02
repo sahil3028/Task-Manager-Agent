@@ -9,9 +9,6 @@ from pydantic_core.core_schema import model_field
 from langchain.tools import tool
 from langchain.agents import create_openai_tools_agent,AgentExecutor
 from todoist_api_python.api import TodoistAPI
-
-
-
 load_dotenv()
 
 todo_api=os.getenv("TODOLIST_API_KEY")
